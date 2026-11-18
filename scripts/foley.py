@@ -200,7 +200,69 @@ def ice_sheet(mix, rng):
     tink(mix, 12.5, amp=0.18)
 
 
-STORIES = {"popcorn": (popcorn_sheet, 18.0), "ice": (ice_sheet, 18.0)}
+def glide(mix, t0, dur, f0, f1, rng, amp=0.2, pan=0.0, noise=0.0):
+    """Frequency glide (squeak, creak, cheese pull) with optional noise grit."""
+    ph = 0.0
+    for i in range(int(dur * SR)):
+        s = i / SR
+        k = s / dur
+        f = f0 + (f1 - f0) * k
+        ph += 2 * math.pi * f / SR
+        env = min(1, s / 0.02) * min(1, (dur - s) / 0.03)
+        v = math.sin(ph) * (1 - noise) + noise * rng.uniform(-1, 1)
+        mix.put(t0 + s, v * env * amp, pan)
+
+
+def fridge_open(mix, t0, rng):
+    """Fridge door: suction seal, then a low thunk when it swings open."""
+    lp = 0.0
+    for i in range(int(0.7 * SR)):
+        s = i / SR
+        lp += 0.03 * (rng.uniform(-1, 1) - lp)
+        mix.put(t0 + s, lp * math.sin(math.pi * s / 0.7) * 0.25, -0.3)
+    pop(mix, t0 + 0.7, amp=0.5, pitch=160)
+
+
+def fridge_hum(mix, t0, t1, amp=0.02):
+    dur = t1 - t0
+    for i in range(int(dur * SR)):
+        s = i / SR
+        mix.put(t0 + s, (math.sin(2 * math.pi * 58 * s) + 0.3 * math.sin(2 * math.pi * 116 * s)) * amp, -0.2)
+
+
+def pizza_sheet(mix, rng):
+    fridge_hum(mix, 0.0, 40.0)
+    for i in range(int(40 * SR)):  # soft room tone
+        pass
+    fridge_open(mix, 2.9, rng)
+    for k in range(4):  # sneaky footsteps on tile
+        tick(mix, 0.6 + k * 0.7, amp=0.12, pan=-0.2 + 0.1 * k)
+    # cardboard box opens, then the slice lifts with a long cheese pull
+    glide(mix, 7.4, 0.5, 260, 180, rng, amp=0.2, noise=0.4)
+    glide(mix, 9.0, 2.4, 900, 240, rng, amp=0.14, pan=0.2, noise=0.25)
+    for k in range(6):
+        tick(mix, 9.5 + k * 0.4, amp=0.06, pan=rng.uniform(-0.4, 0.4))
+    # silent beat 13-17
+    # floor squeaks as the roommate steps out
+    for k in range(3):
+        glide(mix, 17.6 + k * 0.45, 0.35, 2100, 2600, rng, amp=0.16, pan=0.4)
+    glide(mix, 18.5, 0.9, 300, 520, rng, amp=0.16, noise=0.3)  # door creak
+    # chase squeaks and footsteps
+    for k in range(9):
+        glide(mix, 24.4 + k * 0.6, 0.22, 2400 + 100 * (k % 3), 2000, rng, amp=0.13, pan=-0.6 + 1.2 * (k % 2))
+    # shared last slice crunches
+    for k in range(9):
+        crunch(mix, 31.8 + k * 0.85, rng, amp=0.5, pan=rng.uniform(-0.2, 0.2))
+    for t in (35.5, 38.2):
+        tink(mix, t, amp=0.18, pan=0.0)
+    lp = 0.0
+    for i in range(int(40 * SR)):
+        lp += 0.02 * (rng.uniform(-1, 1) - lp)
+        mix.L[i] += lp * 0.003
+        mix.R[i] += lp * 0.003
+
+
+STORIES = {"popcorn": (popcorn_sheet, 18.0), "ice": (ice_sheet, 18.0), "pizza": (pizza_sheet, 40.0)}
 
 
 def write_wav(path, mix):
