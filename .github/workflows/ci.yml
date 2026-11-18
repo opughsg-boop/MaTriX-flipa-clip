@@ -1,0 +1,35 @@
+name: FlipaForge CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  build-and-render:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript typecheck
+        run: npm run lint
+
+      - name: Build Web Studio
+        run: npm run build
+
+      - name: Render sample animations via CLI
+        run: |
+          npm run render -- --input examples/stick-character-jump.ts --format gif --out exports/ci-jump.gif
+          npm run render -- --input examples/whiteboard-explainer.ts --format png --out exports/ci-explainer-frames
+          test -s exports/ci-jump.gif
+          test -s exports/ci-explainer-frames/frame_0001.png

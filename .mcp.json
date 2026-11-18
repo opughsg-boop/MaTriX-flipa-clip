@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "flipaforge": {
+      "command": "npx",
+      "args": ["tsx", "mcp/server.ts"]
+    }
+  }
+}

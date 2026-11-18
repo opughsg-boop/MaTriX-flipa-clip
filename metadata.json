@@ -1,0 +1,6 @@
+{
+  "name": "FlipaForge",
+  "description": "Open-source hand-drawn 2D animation studio for frame-by-frame creation, AI storyboard synthesis, and Codex / Claude Code programmatic video rendering.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
