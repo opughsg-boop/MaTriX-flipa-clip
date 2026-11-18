@@ -211,6 +211,67 @@ export class SoftwarePixelCanvas {
   }
 }
 
+// Solid fills: flatten roughjs fillPath ops into polygons and scanline-fill them (even-odd).
+function scanlineFillOps(
+  ops: Array<{ op: string; data: number[] }>,
+  canvas: SoftwarePixelCanvas,
+  rgba: [number, number, number, number]
+): void {
+  const polys: Array<Array<[number, number]>> = [];
+  let cur: Array<[number, number]> = [];
+  let cx = 0;
+  let cy = 0;
+  for (const item of ops) {
+    const d = item.data;
+    if (item.op === 'move') {
+      if (cur.length > 2) polys.push(cur);
+      cur = [[d[0], d[1]]];
+      cx = d[0];
+      cy = d[1];
+    } else if (item.op === 'lineTo') {
+      cur.push([d[0], d[1]]);
+      cx = d[0];
+      cy = d[1];
+    } else if (item.op === 'bcurveTo') {
+      for (let s = 1; s <= 10; s++) {
+        const t = s / 10;
+        const mt = 1 - t;
+        cur.push([
+          mt * mt * mt * cx + 3 * mt * mt * t * d[0] + 3 * mt * t * t * d[2] + t * t * t * d[4],
+          mt * mt * mt * cy + 3 * mt * mt * t * d[1] + 3 * mt * t * t * d[3] + t * t * t * d[5],
+        ]);
+      }
+      cx = d[4];
+      cy = d[5];
+    }
+  }
+  if (cur.length > 2) polys.push(cur);
+
+  const edges: Array<[number, number, number, number]> = [];
+  for (const poly of polys) {
+    for (let i = 0; i < poly.length; i++) {
+      const [x0, y0] = poly[i];
+      const [x1, y1] = poly[(i + 1) % poly.length];
+      if (y0 !== y1) edges.push([x0, y0, x1, y1]);
+    }
+  }
+  if (edges.length === 0) return;
+  const minY = Math.max(0, Math.floor(Math.min(...edges.map((e) => Math.min(e[1], e[3])))));
+  const maxY = Math.min(canvas.height - 1, Math.ceil(Math.max(...edges.map((e) => Math.max(e[1], e[3])))));
+  for (let py = minY; py <= maxY; py++) {
+    const sy = py + 0.5;
+    const xs: number[] = [];
+    for (const [x0, y0, x1, y1] of edges) {
+      if ((sy < Math.min(y0, y1)) || (sy >= Math.max(y0, y1))) continue;
+      xs.push(x0 + ((sy - y0) * (x1 - x0)) / (y1 - y0));
+    }
+    xs.sort((a, b) => a - b);
+    for (let k = 0; k + 1 < xs.length; k += 2) {
+      canvas.fillRect(xs[k], py, xs[k + 1] - xs[k], 1, rgba);
+    }
+  }
+}
+
 function flattenOps(
   ops: Array<{ op: string; data: number[] }>,
   canvas: SoftwarePixelCanvas,
@@ -356,7 +417,9 @@ function drawElementSoftware(
     for (const drawable of drawables) {
       for (const set of drawable.sets) {
         if (set.type === 'fillPath' || set.type === 'fillSketch') {
-          if (sh.fill) {
+          if (sh.fill && set.type === 'fillPath' && sh.fillStyle === 'solid') {
+            scanlineFillOps(set.ops, canvas, fillRgba);
+          } else if (sh.fill) {
             flattenOps(
               set.ops,
               canvas,
