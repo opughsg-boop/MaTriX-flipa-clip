@@ -49,7 +49,7 @@ The original pipeline files named above are not in this repository. The same ree
 2. **Save & render silent video:**
    `npm run render -- --input examples/<slug>.ts --save-project projects/<slug>.flipa.json --format mp4 --out exports/<slug>-silent.mp4`
    (about 90 s for 18 s of video; needs `ffmpeg` on PATH).
-3. **Audio:** `python3 scripts/make_sfx.py --out exports/<slug>-sfx.wav --duration 18` (48 kHz stereo 16-bit, standard library only; edit the knock/splash/whoosh cue times to match the shot table, and pass `--silent-from/--silent-to` to match the anticipation beat).
+3. **Audio (object foley, e.g. pops, crunches, fizz):** `python3 scripts/foley.py --story popcorn --out exports/<slug>-sfx.wav` (add a story sheet to `STORIES` for new reels). Atmospheric beds: `python3 scripts/make_sfx.py --out exports/<slug>-sfx.wav --duration 18` (48 kHz stereo 16-bit, standard library only; edit the knock/splash/whoosh cue times to match the shot table, and pass `--silent-from/--silent-to` to match the anticipation beat).
 4. **Mux + loudness:** `scripts/mux_audio.sh exports/<slug>-silent.mp4 exports/<slug>-sfx.wav exports/<slug>.mp4` (two-pass loudnorm to −14 LUFS, AAC 48 kHz, faststart).
 5. **Audit:** build a 3×3 contact sheet with `ffmpeg -i exports/<slug>.mp4 -vf "fps=1,scale=270:-1,tile=6x3" -frames:v 1 sheet.jpg` and inspect it, plus `ffprobe` for 1080×1920, 30 fps, 18.0 s, and an audio stream.
 6. **Known limits of the built-in renderer:** text uses a 5×7 uppercase bitmap font (keep captions ≤ ~34 characters at `fontSize: 30`), no emoji, and no Path2D; compose bodies from `polygon`/`ellipse` primitives. Solid fills (`fillStyle: 'solid'`) are scanline-filled by `cli/rasterizer.ts`.
