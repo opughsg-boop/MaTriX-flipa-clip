@@ -149,7 +149,58 @@ def popcorn_sheet(mix, rng):
         mix.R[i] += lp * 0.004
 
 
-STORIES = {"popcorn": (popcorn_sheet, 18.0)}
+def tink(mix, t, amp=0.3, pan=0.0):
+    """Ice cube against glass: bright, short, with a ringing partial."""
+    for i in range(int(0.35 * SR)):
+        s = i / SR
+        v = math.sin(2 * math.pi * 2400 * s) * 0.5 + math.sin(2 * math.pi * 3710 * s) * 0.3 + math.sin(2 * math.pi * 5980 * s) * 0.2
+        mix.put(t + s, v * math.exp(-s * 16) * amp, pan)
+
+
+def pour(mix, t0, t1, rng, amp=0.12, pan=0.0):
+    """Water pouring: band-limited noise whose brightness rises as the glass fills."""
+    dur = t1 - t0
+    lp = 0.0
+    for i in range(int(dur * SR)):
+        s = i / SR
+        k = s / dur
+        lp += (0.05 + 0.4 * k) * (rng.uniform(-1, 1) - lp)
+        mix.put(t0 + s, lp * (0.6 + 0.4 * k) * amp, pan)
+
+
+def gulp(mix, t, rng, amp=0.3, pan=0.0):
+    """Sip and swallow: low wet throat sound."""
+    lp = 0.0
+    for i in range(int(0.45 * SR)):
+        s = i / SR
+        lp += 0.04 * (rng.uniform(-1, 1) - lp)
+        mix.put(t + s, lp * math.sin(math.pi * s / 0.45) * amp * 6, pan)
+
+
+def ice_sheet(mix, rng):
+    hum_fridge = 0.0
+    for i in range(mix.n):  # soft kitchen room tone
+        hum_fridge += 0.02 * (rng.uniform(-1, 1) - hum_fridge)
+        mix.L[i] += hum_fridge * 0.004
+        mix.R[i] += hum_fridge * 0.004
+    for t in (1.8, 2.5, 3.2, 3.9):  # cubes drop into the glass
+        tink(mix, t, amp=0.32, pan=rng.uniform(-0.3, 0.3))
+        pop(mix, t + 0.02, amp=0.15, pan=0.0, pitch=260)  # small water plunk
+    pour(mix, 4.5, 5.5, rng)
+    # silent beat 5.5-6.0
+    gulp(mix, 6.4, rng)
+    gulp(mix, 7.0, rng, amp=0.2)
+    for t in (8.8, 9.1, 9.35):  # rattle with the ice when the glass is set down
+        tink(mix, t, amp=0.22, pan=rng.uniform(-0.5, 0.5))
+    # happy "ahhh" swell and one last tink
+    for i in range(int(2.5 * SR)):
+        s = i / SR
+        env = math.sin(math.pi * min(1, s / 2.5)) * 0.05
+        mix.put(11.0 + s, math.sin(2 * math.pi * 320 * s) * env, 0.0)
+    tink(mix, 12.5, amp=0.18)
+
+
+STORIES = {"popcorn": (popcorn_sheet, 18.0), "ice": (ice_sheet, 18.0)}
 
 
 def write_wav(path, mix):
