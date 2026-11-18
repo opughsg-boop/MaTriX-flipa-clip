@@ -14,6 +14,11 @@ This repository is **FlipaForge**, an open-source FlipaClip-style 2D hand-drawn 
    - PNG sequence: `npm run render -- --input projects/<name>.flipa.json --format png --out exports/<name>-frames`
    - MP4 / WebM (uses system `ffmpeg` automatically if installed): `npm run render -- --input projects/<name>.flipa.json --format mp4 --out exports/<name>.mp4`
 
+## Comedy Reels (US wordless style)
+
+- Skill: `.claude/skills/us-stickman-comedy-reels/SKILL.md` (9:16, 18–60 s, hard cuts, US-English captions and publish pack). Reference build: `examples/red-cap-bathroom.ts`.
+- Audio + mux helpers: `scripts/make_sfx.py` (stdlib-only 48 kHz stereo WAV foley) and `scripts/mux_audio.sh` (two-pass loudnorm to −14 LUFS).
+
 ## Design Rules for Hand-Drawn Realism
 
 - Avoid perfectly straight lines or rigid timing. Prefer `roughness: 1.4–2.0`, `brush: "ink"` or `"pencil"`, and `lineBoilIntensity: 1.0`.
